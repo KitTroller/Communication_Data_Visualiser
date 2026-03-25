@@ -1,0 +1,42 @@
+# ==========================================
+# 1. CMAKE & COMPILER BUILD FOLDERS
+# ==========================================
+# Ignore all folders that start with "build" 
+build/
+build-*/
+*.build/
+
+# Ignore CMake cache and generated Makefiles
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+compile_commands.json
+
+# ==========================================
+# 2. QT CREATOR USER SETTINGS
+# ==========================================
+# These files store your specific Mac's window sizes and compiler paths.
+# Your team should NOT download these.
+*.user
+*.user.*
+# ==========================================
+# 3. COMPILED OBJECTS & EXECUTABLES
+# ==========================================
+*.o
+*.obj
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.app
+appFormulaDash
+FormulaDash
+
+# ==========================================
+# 4. macOS SYSTEM FILES
+# ==========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+
