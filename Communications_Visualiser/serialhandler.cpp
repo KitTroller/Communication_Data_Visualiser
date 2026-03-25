@@ -2,15 +2,15 @@
 #include <QDebug>
 #include <QList>
 
-serialhandler::serialhandler(QObject *parent) : QObject(parent), m_serialPort(new QSerialPort) {
-    connect(m_serialPort, &QSerialPort::readyRead, this, &serialhandler::readData);
+SerialHandler::SerialHandler(QObject *parent) : QObject(parent), m_serialPort(new QSerialPort) {
+    connect(m_serialPort, &QSerialPort::readyRead, this, &SerialHandler::readData);
 }
-serialhandler::~serialhandler(){
+SerialHandler::~SerialHandler(){
     if(m_serialPort->isOpen())
         m_serialPort->close();
 }
 
-void serialhandler::connectToRadio(const QString &portName){
+void SerialHandler::connectToRadio(const QString &portName){
     if (m_serialPort->isOpen())
         m_serialPort->close();
 
@@ -28,14 +28,14 @@ void serialhandler::connectToRadio(const QString &portName){
         emit connectionStatusChanged(false, "Failed: " + m_serialPort->errorString());
     }
 }
-void serialhandler::disconnectRadio(){
+void SerialHandler::disconnectRadio(){
     if(m_serialPort->isOpen()){
         m_serialPort->close();
         emit connectionStatusChanged(false, "Disconnected");
     }
 }
 
-void serialhandler::readData(){
+void SerialHandler::readData(){
     m_serialBuffer.append(m_serialPort->readAll());
 
     while (m_serialBuffer.contains('\n')){
@@ -55,7 +55,7 @@ void serialhandler::readData(){
         bool validData = false;
 
         // Split the string by the comma
-        QList<QString> parts = cleanLine.split(',');
+        const QList<QString> parts = cleanLine.split(',');
         for (const QString &part : parts) {
             if (part.contains("RSSI:")) {
                 parsedRssi = part.section(':', 1, 1).toInt();

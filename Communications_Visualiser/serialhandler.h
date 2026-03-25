@@ -7,14 +7,14 @@
 #include <QString>
 #include <QtQml/qqml.h>
 
-class serialhandler : public QObject
+class SerialHandler : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
+    QML_NAMED_ELEMENT(SerialHandler)
 public:
 
-    explicit serialhandler(QObject *parent = nullptr);
-    ~serialhandler();
+    explicit SerialHandler(QObject *parent = nullptr);
+    ~SerialHandler();
     Q_INVOKABLE void connectToRadio(const QString &portName); // invokable allows C++ functions to be called inside QML # brokenfeature
     Q_INVOKABLE void disconnectRadio();
 
