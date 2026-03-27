@@ -4,9 +4,11 @@ project(Communications_Visualiser VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 SerialPort Charts Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Quick SerialPort Charts Widgets)
 
-qt_standard_project_setup(REQUIRES 6.5)
+find_library(LIQUID_DSP_LIB liquid)
+
+qt_standard_project_setup(REQUIRES 6.10)
 
 qt_add_executable(appCommunications_Visualiser
     main.cpp
@@ -16,9 +18,15 @@ qt_add_qml_module(appCommunications_Visualiser
     URI Communications_Visualiser
     QML_FILES
         Main.qml
-    SOURCES serialhandler.h serialhandler.cpp
+        DashboardPage.qml
+        ConstellationPage.qml
+        SOURCES serialhandler.h serialhandler.cpp
     RESOURCES
         assets/background.png
+        QML_FILES ConstellationPage.qml
+        QML_FILES DashboardPage.qml
+        SOURCES dspengine.h
+        SOURCES dspengine.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -35,10 +43,10 @@ set_target_properties(appCommunications_Visualiser PROPERTIES
 target_link_libraries(appCommunications_Visualiser
     PRIVATE
     Qt6::Quick
-    Qt6::QuickControls2
     Qt6::SerialPort
     Qt6::Charts
     Qt6::Widgets
+    ${LIQUID_DSP_LIB}
 )
 
 install(TARGETS appCommunications_Visualiser

@@ -1,11 +1,11 @@
 #include <QApplication>
 #include <QQmlApplicationEngine>
-#include <QQuickStyle>
 
 int main(int argc, char *argv[])
 {
-    // Force the style to Basic to allow customization of controls
-    QQuickStyle::setStyle("Basic");
+    // Force Qt to bypass macOS native styling BEFORE the app engine boots
+    // This entirely replaces the need for #include <QQuickStyle>
+    qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");
 
     QApplication app(argc, argv);
 
@@ -18,5 +18,5 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
     engine.loadFromModule("Communications_Visualiser", "Main");
 
-    return QCoreApplication::exec();
+    return app.exec();
 }

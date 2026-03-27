@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtCharts           // Injects the C++ charting engine
 import Communications_Visualiser
 
 Window {
@@ -9,196 +8,229 @@ Window {
     height: 800
     visible: true
     title: "Ground Station Visualizer"
-    color: "#050505" // Fallback deep black
+    color: "#050505"
 
-    // 1. The Background Image (Qt 6 QRC Path)
+    // 1. Background Image (Opacity fixed)
     Image {
         id: backgroundImage
         anchors.fill: parent
-        source: "qrc:/qt/qml/Communications_Visualiser/assets/background.png"
+        source: "assets/background.png"
         fillMode: Image.PreserveAspectCrop
-
-        Rectangle {
-            anchors.fill: parent
-            color: "black"
-            opacity: 0.00 // Heavily darkened to make the neon chart lines pop
-        }
+        Rectangle { anchors.fill: parent; color: "black"; opacity: 0.2 }
     }
 
-    // 2. The C++ Backend Bridge
+    // 2. C++ Backend
     SerialHandler {
         id: radioBackend
-
         onConnectionStatusChanged: (isConnected, message) => {
-            statusText.text = message
-            statusText.color = isConnected ? "#00FFCC" : "#FF3333"
-            connectButton.text = isConnected ? "Disconnect" : "Connect"
-        }
-
-        onRadioDataReceived: (rssi, ber) => {
-            // Push the physical C++ data into our QML Javascript function
-            updateCharts(rssi, ber)
-        }
+                                       statusText.text = message
+                                       statusText.color = isConnected ? "#00FFCC" : "#FF3333"
+                                       connectButton.text = isConnected ? "Disconnect" : "Connect"
+                                   }
+        onRadioDataReceived: (rssi, ber, snr, plr) => {
+                                 dashboardPage.updateTelemetry(rssi, ber, snr, plr)
+                             }
+        onConstellationDataReceived: (i, q) => {
+                                         constellationPage.updateConstellation(i, q)
+                                     }
     }
+    DspEngine {
+            id: dspBackend
+            Component.onCompleted: dspBackend.startSimulation()
 
-    // 3. The Top Control Bar
+            onNewConstellationData: (i, q, isError) => {
+                        if (navBar.currentIndex === 1) {
+                            constellationPage.updateConstellation(i, q, isError)
+                        }
+                    }
+
+            onSimulatedTelemetry: (rssi, ber, snr, plr) => {
+             // Index 0 is the Telemetry Tab.
+             // THE FIX: Allow simulation if we are Offline, Disconnected, or Failed.
+            if (navBar.currentIndex === 0 && !statusText.text.startsWith("Connected")) {
+                 dashboardPage.updateTelemetry(rssi, ber, snr, plr)
+                }
+            }
+        }
+    // 3. Top Control Bar
     Rectangle {
         id: topBar
         anchors.top: parent.top
         width: parent.width
         height: 60
-        color: "#AA111111" // Hex with Alpha (AA) for a frosted glass transparency
+        color: "#AA111111"
 
         RowLayout {
             anchors.fill: parent
             anchors.margins: 10
             spacing: 15
 
-            Label {
-                text: "TARGET PORT:"
-                color: "#00FFCC" // Cyber-cyan
-                font.pixelSize: 14
-                font.bold: true
-            }
+            Label { text: "TARGET PORT:"; color: "#00FFCC"; font.pixelSize: 14; font.bold: true }
 
-            TextField {
-                id: portInput
-                Layout.preferredWidth: 250
-                placeholderText: "/dev/cu.usbmodem"
-                color: "white"
-                background: Rectangle {
-                    color: "#44FFFFFF"
-                    radius: 4
-                    border.color: "#555555"
+            ComboBox {
+                id: portSelector
+                Layout.preferredWidth: 200
+                model: radioBackend.availablePorts
+                background: Rectangle { color: "#44FFFFFF"; radius: 4; border.color: "#555555" }
+                contentItem: Text {
+                    text: parent.displayText
+                    color: "white"
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 10
                 }
+            }
+            
+            Button {
+                id: refreshButton
+                text: "Refresh"
+                Layout.preferredWidth: 80
+                background: Rectangle { color: parent.pressed ? "#555555" : "#333333"; radius: 4 }
+                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: radioBackend.refreshPorts()
             }
 
             Button {
                 id: connectButton
                 text: "Connect"
-                // Custom professional button styling
-                background: Rectangle {
-                    color: parent.pressed ? "#00AA88" : "#00FFCC"
-                    radius: 4
-                }
-                contentItem: Text {
-                    text: parent.text
-                    color: "black"
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
+                background: Rectangle { color: parent.pressed ? "#00AA88" : "#00FFCC"; radius: 4 }
+                contentItem: Text { text: parent.text; color: "black"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: text === "Connect" ? radioBackend.connectToRadio(portSelector.currentText) : radioBackend.disconnectRadio()
+            }
 
-                onClicked: {
-                    if (text === "Connect") {
-                        radioBackend.connectToRadio(portInput.text)
-                    } else {
-                        radioBackend.disconnectRadio()
-                    }
-                }
+            Button {
+                id: recordButton
+                text: radioBackend.isLogging ? "STOP RECORDING" : "START LOGGING"
+                background: Rectangle { color: radioBackend.isLogging ? "#FF3333" : "#333333"; radius: 4; border.color: "#FF3333"; border.width: 1 }
+                contentItem: Text { text: parent.text; color: "white"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: radioBackend.toggleLogging(!radioBackend.isLogging)
             }
 
             Label {
-                id: statusText
-                text: "SYSTEM OFFLINE"
-                color: "#FF3333"
-                font.pixelSize: 14
-                font.bold: true
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignRight
+                id: statusText; text: "SYSTEM OFFLINE"; color: "#FF3333"; font.pixelSize: 14; font.bold: true
+                Layout.fillWidth: true; horizontalAlignment: Text.AlignRight
             }
         }
     }
 
-    // 4. The Oscilloscope Engine
-    property real timeCounter: 0.0
-    property real windowSize: 100.0 // Keep exactly 100 data points on the screen
-
-    ChartView {
-        id: telemetryChart
+    // --- NEW GLOBAL LAYOUT ---
+    RowLayout {
         anchors.top: topBar.bottom
         anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.margins: 20
+        width: parent.width
+        spacing: 0
 
-        // Professional Styling
-        backgroundColor: "transparent"
-        titleColor: "white"
-        title: "LIVE RF TELEMETRY (868 MHz FSK)"
-        titleFont.pointSize: 18
-        titleFont.bold: true
-        legend.labelColor: "white"
-        legend.alignment: Qt.AlignBottom
-        antialiasing: true // Hardware acceleration for smooth lines
+        // LEFT SIDE (The Visualizer Pages)
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 0
 
-        // The X-Axis (Time)
-        ValueAxis {
-            id: axisX
-            min: 0
-            max: windowSize
-            color: "#555555"
-            labelsColor: "#AAAAAA"
-            gridLineColor: "#333333"
-            labelFormat: "%.0f"
+            TabBar {
+                id: navBar
+                Layout.fillWidth: true
+                background: Rectangle { color: "#1A1A1A" }
+
+                component CyberTab: TabButton {
+                    id: control
+                    background: Rectangle {
+                        color: control.checked ? "#33FFFFFF" : "transparent"
+                        Rectangle { width: parent.width; height: 3; anchors.bottom: parent.bottom; color: control.checked ? "#00FFCC" : "transparent" }
+                    }
+                    contentItem: Text { text: control.text; color: control.checked ? "#00FFCC" : "#888888"; font.bold: true; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter }
+                }
+
+                CyberTab { text: "RF TELEMETRY" }
+                CyberTab { text: "SIGNAL CONSTELLATION" }
+            }
+
+            SwipeView {
+                id: viewPager
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                currentIndex: navBar.currentIndex
+                DashboardPage { id: dashboardPage }
+                ConstellationPage { id: constellationPage }
+            }
         }
 
-        // The Left Y-Axis (RSSI)
-        ValueAxis {
-            id: axisY_RSSI
-            min: -120
-            max: 0
-            color: "#555555"
-            labelsColor: "#00FFCC"
-            gridLineColor: "#333333"
+        // RIGHT SIDE (Global Master Sidebar)
+        Rectangle {
+            Layout.preferredWidth: 400
+            Layout.fillHeight: true
+            color: "#0A0A0A"
+            border.color: "#333333"
+            border.width: 1
+
+            ListModel { id: packetLogModel }
+
+            // Connect the C++ Packet Engine to the UI list
+            Connections {
+                target: dspBackend
+                function onPacketReceived(modName, speed, timeMs, tx, rx, hasError) {
+                    packetLogModel.insert(0, { "modName": modName, "speed": speed, "timeMs": timeMs, "txStr": tx, "rxStr": rx, "isError": hasError })
+                    if (packetLogModel.count > 10) packetLogModel.remove(10) // Keep only last 10
+                }
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 15
+                spacing: 15
+
+                Label { text: "MASTER DSP CONTROLS"; color: "#00FFCC"; font.bold: true; font.pixelSize: 16 }
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#333" }
+
+                ComboBox {
+                    Layout.fillWidth: true
+                    model: ["QPSK (4-PSK)", "16-QAM", "64-QAM", "256-QAM", "CC1101 FSK (Simulated)"]
+                    currentIndex: dspBackend.modType
+                    onActivated: dspBackend.modType = currentIndex
+                    background: Rectangle { color: "#222"; radius: 4; border.color: "#444" }
+                    contentItem: Text { text: parent.displayText; color: "white"; leftPadding: 10; verticalAlignment: Text.AlignVCenter }
+                }
+
+                Label { text: "Signal-to-Noise Ratio (SNR): " + dspBackend.snr.toFixed(1) + " dB"; color: "white"; font.bold: true }
+                Slider {
+                    Layout.fillWidth: true
+                    from: 10.0; to: 50.0; value: dspBackend.snr
+                    onValueChanged: dspBackend.snr = value
+                }
+
+                Item { height: 10 }
+                Label { text: "LIVE PACKET LOG"; color: "#00FFCC"; font.bold: true; font.pixelSize: 16 }
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#333" }
+
+                // The Stacked History Log
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    model: packetLogModel
+                    clip: true
+                    spacing: 8
+                    delegate: Rectangle {
+                        width: ListView.view.width
+                        height: 55
+                        color: "#111"
+                        border.color: isError ? "#551111" : "#115511"
+                        border.width: 1
+                        radius: 4
+
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 5
+                            spacing: 3
+                            Row {
+                                spacing: 15
+                                Text { text: "[" + modName + "]"; color: "#888"; font.pixelSize: 11; font.bold: true }
+                                Text { text: speed + " bits/sym"; color: "#666"; font.pixelSize: 11 }
+                                Text { text: "⏱ " + timeMs + "ms"; color: "#00FFCC"; font.pixelSize: 11 }
+                            }
+                            Text { text: "TX: " + txStr; color: "#555"; font.family: "monospace"; font.pixelSize: 11 }
+                            Text { text: "RX: " + rxStr; color: isError ? "#FF3333" : "#00FFCC"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
+                        }
+                    }
+                }
+            }
         }
-
-        // The Right Y-Axis (BER)
-        ValueAxis {
-            id: axisY_BER
-            min: 0
-            max: 10
-            color: "#555555"
-            labelsColor: "#FF3333"
-            gridLineColor: "transparent" // Hide secondary grid so it doesn't look messy
-        }
-
-        // The Data Lines
-        LineSeries {
-            id: seriesRSSI
-            name: "Signal Strength (dBm)"
-            axisX: axisX
-            axisY: axisY_RSSI
-            color: "#00FFCC"
-            width: 3
-        }
-
-        LineSeries {
-            id: seriesBER
-            name: "Bit Error Rate (%)"
-            axisX: axisX
-            axisYRight: axisY_BER // Maps this line to the right-side scale
-            color: "#FF3333"
-            width: 3
-        }
-    }
-
-    // 5. The Dynamic Javascript Logic
-    function updateCharts(rssi, ber) {
-        // Drop the new data points onto the line
-        seriesRSSI.append(timeCounter, rssi)
-        seriesBER.append(timeCounter, ber)
-
-        // The Scrolling Logic: If we hit the right wall, shift the camera forward
-        if (timeCounter > axisX.max) {
-            axisX.min = timeCounter - windowSize
-            axisX.max = timeCounter
-
-            // Critical Memory Management: Delete data that falls off the left side of the screen
-            seriesRSSI.remove(0)
-            seriesBER.remove(0)
-        }
-
-        timeCounter += 1.0 // Tick the clock forward
     }
 }
