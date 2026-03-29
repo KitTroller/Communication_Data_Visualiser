@@ -13,6 +13,7 @@ class DspEngine : public QObject
     QML_NAMED_ELEMENT(DspEngine)
     Q_PROPERTY(float snr READ snr WRITE setSnr NOTIFY snrChanged)
     Q_PROPERTY(int modType READ modType WRITE setModType NOTIFY modTypeChanged)
+    Q_PROPERTY(float gridOpacity READ gridOpacity WRITE setGridOpacity NOTIFY gridOpacityChanged)
 
 public:
     explicit DspEngine(QObject *parent = nullptr);
@@ -24,6 +25,9 @@ public:
     int modType() const { return m_modType; }
     void setModType(int type);
 
+    float gridOpacity() const { return m_gridOpacity; }
+    void setGridOpacity(float opacity);
+
     Q_INVOKABLE void startSimulation();
     Q_INVOKABLE void stopSimulation();
 
@@ -34,6 +38,7 @@ signals:
     // New Signals for the Full System Simulation
     void simulatedTelemetry(float rssi, float ber, float snr, float plr);
     void packetReceived(QString modName, int speed, int timeMs, QString tx, QString rx, bool hasError);
+    void gridOpacityChanged();
 
 private slots:
     void processDspMath();
@@ -46,6 +51,7 @@ private:
     int m_modType = 1;
     unsigned int m_mSize = 16;
     unsigned int m_bitsPerSymbol = 4;
+    float m_gridOpacity = 0.15f;
 
     QTimer *m_timer;
     modemcf m_modem = nullptr;

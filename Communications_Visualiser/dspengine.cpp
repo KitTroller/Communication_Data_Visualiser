@@ -42,6 +42,10 @@ unsigned int DspEngine::countSetBits(unsigned int n) {
     return count;
 }
 
+void DspEngine::setGridOpacity(float opacity) {
+    if (m_gridOpacity != opacity) { m_gridOpacity = opacity; emit gridOpacityChanged(); }
+}
+
 void DspEngine::processDspMath()
 {
     float perfect_i = 0.0f, perfect_q = 0.0f;

@@ -195,6 +195,15 @@ Window {
                     from: 10.0; to: 50.0; value: dspBackend.snr
                     onValueChanged: dspBackend.snr = value
                 }
+                Item { height: 10 }
+                Label { text: "Decision Grid Opacity: " + dspBackend.gridOpacity.toFixed(2); color: "white"; font.bold: true; font.pixelSize: 12 }
+                Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 1.0
+                    value: dspBackend.gridOpacity
+                    onValueChanged: dspBackend.gridOpacity = value
+                }
 
                 Item { height: 10 }
                 Label { text: "LIVE PACKET LOG"; color: "#00FFCC"; font.bold: true; font.pixelSize: 16 }
