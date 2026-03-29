@@ -57,7 +57,7 @@ Item {
                     if (dspBackend.modType < 4) {
                         ctx.lineWidth = 1;
                         // Dynamically inject the opacity variable into the rgba string
-                        ctx.strokeStyle = "rgba(0, 255, 204, " + dspBackend.gridOpacity + ")";
+                        ctx.strokeStyle = "rgba(0, 230, 240, " + dspBackend.gridOpacity + ")";
                         ctx.beginPath();
 
                         // Calculate M-size based on dropdown index (0->4, 1->16, 2->64, 3->256)
