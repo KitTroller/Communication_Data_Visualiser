@@ -8,8 +8,41 @@ Item {
 
     // A fast javascript array to hold incoming data before the screen draws it
     property var pointBuffer: []
-    function updateConstellation(i, q, isError) {
-            pointBuffer.push({i: i, q: q, isError: isError})
+    property real lastI: NaN
+    property real lastQ: NaN
+
+    onVisibleChanged: {
+            if (visible) clearCanvas()
+        }
+
+    function clearCanvas() {
+            var ctx = phosphorCanvas.getContext("2d");
+            ctx.fillStyle = "#050505";
+            ctx.fillRect(0, 0, phosphorCanvas.width, phosphorCanvas.height);
+            pointBuffer = [];
+            lastI = NaN;
+            lastQ = NaN;
+            phosphorCanvas.requestPaint();
+        }
+
+    // Reset trajectory when modulation changes to avoid jump-lines
+    Connections {
+        target: dspBackend
+        function onModTypeChanged() {
+            pointBuffer = []
+            lastI = NaN
+            lastQ = NaN
+            phosphorCanvas.requestPaint()
+        }
+    }
+
+    function updateConstellation(i, q, isError, isPeak) {
+            pointBuffer.push({i: i, q: q, isError: isError, isPeak: isPeak})
+
+            // --- FIX 2: Clamp the memory so it never hoards points while hidden ---
+            if (pointBuffer.length > 200) {
+                pointBuffer.shift();
+            }
             phosphorCanvas.requestPaint()
         }
 
@@ -50,64 +83,70 @@ Item {
                     ctx.shadowBlur = 0;
                     ctx.shadowColor = "transparent";
 
-                    // 1. Draw the phosphor fade (buries the background)
-                    ctx.fillStyle = "rgba(5, 5, 5, 0.08)";
+                    // --- FIX 3: DYNAMIC TIME-SCALED PHOSPHOR FADE ---
+                    // Calculate a base fade (0.02 for lines, 0.08 for dots)
+                    var baseFade = dspBackend.useRrc ? 0.02 : 0.08;
+
+                    // Multiply the fade by how slow the simulation is running
+                    // If running at 150ms, fade is 10x stronger per frame to compensate.
+                    var speedMultiplier = dspBackend.timerInterval / 15.0;
+                    var fadeOpacity = Math.min(baseFade * speedMultiplier, 1.0);
+
+                    ctx.fillStyle = "rgba(5, 5, 5, " + fadeOpacity + ")";
                     ctx.fillRect(0, 0, width, height);
+
                     // --- 2. THE NEW MATH: DYNAMIC DECISION BOUNDARIES ---
                     if (dspBackend.modType < 4) {
                         ctx.lineWidth = 1;
-                        // Dynamically inject the opacity variable into the rgba string
                         ctx.strokeStyle = "rgba(0, 230, 240, " + dspBackend.gridOpacity + ")";
                         ctx.beginPath();
 
-                        // Calculate M-size based on dropdown index (0->4, 1->16, 2->64, 3->256)
                         var mSize = Math.pow(2, (dspBackend.modType + 1) * 2);
                         var numLines = Math.sqrt(mSize) - 1;
-
-                        // liquid-dsp normalizes QAM points within a ~[-1.2, 1.2] boundary
                         var limit = 1.2;
                         var gap = (limit * 2) / (numLines + 1);
 
-                        // Draw the mathematical crosshairs
                         for(var k = 1; k <= numLines; k++) {
                             var val = -limit + (k * gap);
-
-                            // Vertical Lines
                             var p1 = constellationChart.mapToPosition(Qt.point(val, -1.5), mappingSeries);
                             var p2 = constellationChart.mapToPosition(Qt.point(val, 1.5), mappingSeries);
-                            ctx.moveTo(p1.x, p1.y);
-                            ctx.lineTo(p2.x, p2.y);
-
-                            // Horizontal Lines
+                            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
                             var p3 = constellationChart.mapToPosition(Qt.point(-1.5, val), mappingSeries);
                             var p4 = constellationChart.mapToPosition(Qt.point(1.5, val), mappingSeries);
-                            ctx.moveTo(p3.x, p3.y);
-                            ctx.lineTo(p4.x, p4.y);
+                            ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
                         }
                         ctx.stroke();
                     }
 
-                    // 3. Setup the glowing neon pen for the dots
-                    ctx.fillStyle = "#00FFCC";
-                    ctx.shadowColor = "#00FFCC";
-                    ctx.shadowBlur = 10;
-
-                    // 4. Draw the dots
+                    // 3. Draw the trajectory and points
+                    ctx.lineWidth = 2;
+                    
                     while (pointBuffer.length > 0) {
-                        var pt = pointBuffer.pop();
+                        var pt = pointBuffer.shift(); // FIFO order is critical for lines
                         var mapped = constellationChart.mapToPosition(Qt.point(pt.i, pt.q), mappingSeries);
 
-                        if (pt.isError) {
-                            ctx.fillStyle = "#FF3333";   // Error! Neon Red
-                            ctx.shadowColor = "#FF3333";
-                        } else {
-                            ctx.fillStyle = "#00FFCC";   // Nominal: Neon Cyan
-                            ctx.shadowColor = "#00FFCC";
+                        // Draw line from previous point if RRC is enabled
+                        if (dspBackend.useRrc && !isNaN(lastI)) {
+                            var prevMapped = constellationChart.mapToPosition(Qt.point(lastI, lastQ), mappingSeries);
+                            ctx.beginPath();
+                            ctx.moveTo(prevMapped.x, prevMapped.y);
+                            ctx.lineTo(mapped.x, mapped.y);
+                            ctx.strokeStyle = pt.isError ? "rgba(255, 51, 51, 0.6)" : "rgba(0, 255, 204, 0.4)";
+                            ctx.stroke();
                         }
 
-                        ctx.beginPath();
-                        ctx.arc(mapped.x, mapped.y, 4, 0, 2 * Math.PI);
-                        ctx.fill();
+                        // Draw the sample point (dot)
+                        if (pt.isPeak || !dspBackend.useRrc) {
+                            ctx.beginPath();
+                            ctx.fillStyle = pt.isError ? "#FF3333" : "#00FFCC";
+                            ctx.shadowColor = ctx.fillStyle;
+                            // Add a tiny bit of glow to the peaks to make them pop out of the wire
+                            ctx.shadowBlur = dspBackend.useRrc ? 4 : (pt.isError ? 12 : 6);
+                            ctx.arc(mapped.x, mapped.y, 2.5, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                        lastI = pt.i;
+                        lastQ = pt.q;
                     }
                 }
             }
