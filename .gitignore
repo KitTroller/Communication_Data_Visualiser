@@ -50,3 +50,15 @@ Masterclass.md
 Next_Steps.md
 Old_md
 Project_Overview.md
+
+# Ignore heavy model weights and checkpoints
+smolvlm_rf_model/
+checkpoint-*/
+*.safetensors
+*.bin
+
+# Ignore raw image datasets (unless you are using Git LFS)
+dataset_images/
+*.pngTelecomms_Results/smolvlm_rf_model/
+*.safetensors
+dataset_images.zip
