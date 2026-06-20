@@ -6,9 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick SerialPort Charts Widgets)
 
-find_library(LIQUID_DSP_LIB liquid)
+# liquid-dsp. Found automatically in standard prefixes (/usr/local on macOS,
+# /ucrt64 under MSYS2). For a custom location pass -DLIQUID_ROOT=<prefix>.
+find_library(LIQUID_DSP_LIB NAMES liquid HINTS "${LIQUID_ROOT}/lib")
+find_path(LIQUID_DSP_INCLUDE NAMES liquid/liquid.h HINTS "${LIQUID_ROOT}/include")
+if(NOT LIQUID_DSP_LIB OR NOT LIQUID_DSP_INCLUDE)
+    message(FATAL_ERROR "liquid-dsp not found. Install it, or pass -DLIQUID_ROOT=<prefix> containing lib/ and include/liquid/.")
+endif()
 
-qt_standard_project_setup(REQUIRES 6.10)
+qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(appCommunications_Visualiser
     main.cpp
@@ -48,6 +54,8 @@ target_link_libraries(appCommunications_Visualiser
     Qt6::Widgets
     ${LIQUID_DSP_LIB}
 )
+
+target_include_directories(appCommunications_Visualiser PRIVATE ${LIQUID_DSP_INCLUDE})
 
 install(TARGETS appCommunications_Visualiser
     BUNDLE DESTINATION .

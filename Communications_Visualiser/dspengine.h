@@ -7,6 +7,8 @@
 #include <QThread>
 #include <QtQml/qqml.h>
 #include <liquid/liquid.h>
+#include <vector>
+#include <complex>
 #include <QFile>
 #include <QTextStream>
 #include <QDir>
@@ -38,6 +40,8 @@ signals:
 private:
     void rebuildModem();
     unsigned int countSetBits(unsigned int n);
+    float randn();                  // standard-normal sample (Box-Muller)
+    void advanceImpairmentStates(); // advance slow per-symbol impairment states
 
     float m_snr = 30.0f;
     int m_modType = 1;
@@ -45,6 +49,7 @@ private:
 
     modemcf m_modem = nullptr;
     firinterp_crcf m_interp = nullptr;
+    std::vector<std::complex<float>> m_hexTable; // backing store for the arbitrary HQAM constellation
     unsigned int m_mSize = 16;
     unsigned int m_bitsPerSymbol = 4;
     QString m_modName = "16-QAM";
@@ -61,10 +66,14 @@ private:
     int m_iqImbalanceLevel = 0;
     int m_interferenceLevel = 0;
 
+    // Stateful impairment processes, advanced once per symbol
+    float m_pnPhase = 0.0f;   // phase-noise accumulator (rad), Wiener/OU process
+    float m_jamPhase = 0.0f;  // coherent CW jammer phase (rad)
+
     int m_batchSize = 1;  // Variable to introduce creating data fast for later AI training
 
     // --- THE NEW HELPER ---
-    void applyImpairments(float i_in, float q_in, float& i_out, float& q_out, float noise_power);
+    void applyImpairments(float i_in, float q_in, float& i_out, float& q_out, float sigma);
     bool m_muteSignals = false;
     long m_totalSymbols = 0;
     long m_errorSymbols = 0;

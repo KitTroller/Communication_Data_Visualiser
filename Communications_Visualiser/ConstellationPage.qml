@@ -55,7 +55,8 @@ Item {
             isError: isError,
             isPeak: isPeak
         });
-        if (pointBuffer.length > 200) {
+        // High cap so fast dataset-mode bursts (200 pts/tick) are never dropped.
+        if (pointBuffer.length > 2048) {
             pointBuffer.shift();
         }
         phosphorCanvas.requestPaint();
