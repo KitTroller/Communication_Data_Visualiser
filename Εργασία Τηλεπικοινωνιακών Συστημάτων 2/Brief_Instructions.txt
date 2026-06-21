@@ -1,0 +1,5 @@
+Seeing Signals - RF Constellation Visualiser\r\nWindows 10/11 (64-bit). Unzip, then double-click appCommunications_Visualiser.exe
+We have developed an interactive app for the project:
+Summary of logic inside pdf report
+Code in the GitHub link in the report along side full dataset images
+

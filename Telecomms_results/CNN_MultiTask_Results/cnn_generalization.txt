@@ -1,0 +1,7 @@
+Leave-one-SNR-out generalization: trained on 10 & 30 dB, tested on UNSEEN intermediate 20 dB.
+(snr_range task omitted; 20 dB is not a training class.)
+
+modulation: 0.8887
+phase_noise: 0.5469
+iq_imbalance: 0.8643
+interference: 0.7988

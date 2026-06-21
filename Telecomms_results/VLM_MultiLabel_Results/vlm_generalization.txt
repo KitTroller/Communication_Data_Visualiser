@@ -1,0 +1,7 @@
+VLM leave-one-SNR-out generalization: trained on 10 & 30 dB, tested on UNSEEN 20 dB.
+(SNR task omitted: 20 dB is not a training class.)
+
+modulation: 0.2598
+phase_noise: 0.2676
+iq_imbalance: 0.2871
+interference: 0.3359

@@ -139,9 +139,11 @@ an automated mode, the same engine exports a labelled dataset of $3072$ images
 We analyse each impairment model mathematically, validate the additive-noise channel
 against the theoretical symbol-error probability of square QAM, and train two image
 classifiers --- a ResNet-18 convolutional network and a LoRA fine-tuned SmolVLM-256M
-vision-language model --- reaching $80\%$ and $55\%$ validation accuracy respectively. The
-confusion structure exposed a modelling error in our hexagonal-QAM constellations, which we
-trace and correct. All artefacts are reproducible from the accompanying application.
+vision-language model --- each predicting all five labels. The multi-task CNN is strong (mean
+per-task accuracy $0.82$, modulation $0.86$) and generalizes to an unseen SNR, whereas the
+compact VLM recovers only coarse geometry (mean $0.36$) and generalizes poorly. A
+confusion-matrix anomaly exposed a modelling error in our hexagonal-QAM constellations, which
+we trace and correct. All artefacts are reproducible from the accompanying application.
 %ABSTRACT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newpage
@@ -306,7 +308,8 @@ below.
 \label{sec:sep}
 To validate the channel model we measure the symbol-error probability (SEP) versus
 $E_s/N_0$ for the square constellations 16/64/256-QAM, under both no phase noise and high
-phase noise, and compare against the textbook expression for square $M$-QAM
+phase noise (the residual phase modelled as a wrapped Gaussian random variable, as the brief
+specifies), and compare against the textbook expression for square $M$-QAM
 \cite{Proakis2008},
 \begin{equation}
 P_s = 4\Big(1-\tfrac{1}{\sqrt M}\Big)Q\!\left(\!\sqrt{\tfrac{3}{M-1}\tfrac{E_s}{N_0}}\right)
@@ -371,68 +374,155 @@ to draw a full image roughly four times faster than the initial implementation.
 \label{sec:amc}
 
 \subsection{Models and training}
-Both classifiers are trained on the same $3072$-image dataset with an $80/20$
-train/validation split. The convolutional baseline is a ResNet-18 \cite{He2016} trained with
-the Adam optimiser and cross-entropy loss for $10$ epochs. The vision-language model is
-SmolVLM-256M-Instruct \cite{SmolVLM2025}, adapted to the sixteen-class problem by Low-Rank
-Adaptation (LoRA \cite{Hu2021}; rank $16$, $\alpha=32$, dropout $0.05$ on the attention and
-MLP projections), trained for $3$ epochs at learning rate $5\times10^{-5}$; only the small
-adapter is updated, leaving the $256$M backbone frozen.
+Both models are trained on the same $3072$-image (v2, true-hexagonal) dataset with an $80/20$
+stratified train/validation split, and \emph{both predict all five structured labels} of
+Part~I: modulation, phase-noise level, I/Q-imbalance level, interference level and SNR range.
+
+The convolutional baseline is a \textbf{multi-task ResNet-18} \cite{He2016}: a single shared
+backbone feeds five independent linear heads (one per label), trained jointly by minimising
+the sum of the five cross-entropy losses (Adam, $12$ epochs). The vision-language model is
+\textbf{SmolVLM-256M-Instruct} \cite{SmolVLM2025}, fine-tuned with Low-Rank Adaptation
+(LoRA \cite{Hu2021}; rank $16$, $\alpha=32$, dropout $0.05$; $7.7$M of $264$M parameters
+trainable; $3$ epochs, lr $5\times10^{-5}$). It receives the image and one text question and
+must emit a single structured line, \texttt{Modulation: \dots; PhaseNoise: \dots; IQ: \dots;
+Interference: \dots; SNR: \dots}, parsed field-by-field at evaluation. To keep the score
+honest the evaluator feeds the model \emph{only} the question (never the answer), generates
+freely, and matches each field by exact string equality --- a parse failure counts as wrong.
+
+\subsection{Per-task results}
+Table~\ref{tab:amc} reports per-task validation accuracy for both models, together with a
+\emph{generalization} test: trained only at $10$ and $30$~dB and evaluated on the unseen
+intermediate $20$~dB (the SNR head is omitted there, since $20$~dB is never a training class).
+
+\begin{table}[htbp]
+\centering
+\caption{Per-task accuracy. ``Val'' is the $80/20$ validation set; ``Gen.'' is the unseen
+$20$~dB generalization test. Chance is $1/16$ for modulation, $1/4$ for the impairment levels
+and $1/3$ for SNR.}
+\label{tab:amc}
+\begin{tabular}{lcccc}
+\hline
+ & \multicolumn{2}{c}{ResNet-18 (CNN)} & \multicolumn{2}{c}{SmolVLM (VLM)}\\
+Task & Val & Gen. & Val & Gen.\\
+\hline
+Modulation     & $0.863$ & $0.889$ & $0.493$ & $0.260$\\
+Phase noise    & $0.558$ & $0.547$ & $0.314$ & $0.268$\\
+I/Q imbalance  & $0.802$ & $0.864$ & $0.255$ & $0.287$\\
+Interference   & $0.924$ & $0.799$ & $0.315$ & $0.336$\\
+SNR range      & $0.943$ & ---     & $0.444$ & ---\\
+\hline
+Mean           & $0.818$ & --- & $0.364$ & ---\\
+\hline
+\end{tabular}
+\end{table}
 
 \subsection{Convolutional baseline}
-The ResNet-18 reaches $80\%$ validation accuracy (macro-F1 $0.78$). Its confusion matrix
-(Figure~\ref{fig:cnn}) splits the errors into two clear families:
-\begin{itemize}
-\item \textbf{Hexagonal vs.\ square QAM aliasing.} 16-HQAM and 64-HQAM have low precision and
-bleed into 16-QAM and 64-APSK. This is \emph{not} a weakness of the network: in the dataset
-used for training, HQAM was still rendered as square QAM (Section~\ref{sec:hqam}), so the two
-classes were literally the same images and could only be guessed at chance. This failure is
-precisely what led us to find and fix the constellation bug; with the corrected,
-geometrically distinct constellations (Figure~\ref{fig:hqam}) these classes become separable.
-\item \textbf{High-order density saturation.} 128-APSK ($13\%$ recall) and 128-QAM ($21\%$
-recall) are the densest constellations; 128-QAM is most often confused with 32-QAM. At
-$224\times224$ with noise, constellations of $128$--$256$ points blur into near-identical
-clouds. This is a genuine information limit of the image representation rather than a
-modelling error, and would require higher resolution or per-class SNR control to mitigate.
-\end{itemize}
-The low-order and structurally distinctive schemes (BPSK, QPSK, 4-HQAM, 16/64/256-QAM) are
-classified almost perfectly.
+The multi-task ResNet-18 is strong across the board: it identifies the modulation $86\%$ of
+the time and the impairment presence/severity at $80$--$94\%$, with phase noise the hardest
+task ($56\%$) because low-level jitter is visually subtle. Its modulation confusion matrix
+(Figure~\ref{fig:cnn_mod}) confirms that the corrected hexagonal constellations are now
+cleanly separated: $16$-HQAM scores $35/39$ and $16$-QAM $39/39$ with essentially no leakage
+between them --- the very aliasing that, in an earlier single-task run on the \emph{uncorrected}
+dataset, had made these classes indistinguishable. The errors that remain are the genuine
+high-order density limit: the dense APSK family confusing among itself ($32/64/128$-APSK) and
+$32$-QAM bleeding into $128$-QAM. The per-impairment matrices (Figure~\ref{fig:cnn_imp}) show
+the model resolves I/Q imbalance, interference and SNR well, confusing chiefly \emph{adjacent}
+severity levels.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.8\columnwidth]{figures/cnn_confusion.png}
-\caption{ResNet-18 validation confusion matrix. Errors concentrate in (i) the HQAM/QAM
-aliasing (since fixed) and (ii) the densest high-order constellations.}
-\label{fig:cnn}
+\includegraphics[width=0.72\columnwidth]{figures/cnn_cm_modulation.pdf}
+\caption{CNN modulation confusion matrix (validation). The HQAM/QAM aliasing of the earlier
+run is gone; residual errors are confined to the dense APSK and high-order QAM classes.}
+\label{fig:cnn_mod}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\subfigure[Phase noise]{\includegraphics[width=0.44\columnwidth]{figures/cnn_cm_phase_noise.pdf}}
+\subfigure[I/Q imbalance]{\includegraphics[width=0.44\columnwidth]{figures/cnn_cm_iq_imbalance.pdf}}
+\subfigure[Interference]{\includegraphics[width=0.44\columnwidth]{figures/cnn_cm_interference.pdf}}
+\subfigure[SNR range]{\includegraphics[width=0.44\columnwidth]{figures/cnn_cm_snr_range.pdf}}
+\caption{CNN per-impairment confusion matrices (validation). Errors fall mostly on adjacent
+severity levels; phase noise is the hardest.}
+\label{fig:cnn_imp}
 \end{figure}
 
 \subsection{Vision-language model}
-The LoRA-tuned SmolVLM-256M reaches $55\%$ accuracy (macro-F1 $0.54$). It classifies the
-visually distinctive classes well (256-QAM, 64-QAM, 16-QAM and QPSK all above $0.84$ F1) but
-struggles far more than the CNN on the APSK family and the high-order schemes
-(Figure~\ref{fig:vlm}). This is the expected outcome: a $256$M general-purpose multimodal
-model, adapted with a small LoRA on a few thousand images, has neither the inductive bias of
-a convolutional network for dense-texture discrimination nor enough task data to acquire it.
-The experiment is nonetheless informative --- it shows that a general ``image reader'' can
-recover the coarse structure of a constellation but not the fine lattice distinctions that
-separate, say, 64-APSK from 64-HQAM.
+The LoRA-tuned SmolVLM is far weaker (mean $0.36$ versus the CNN's $0.82$). It reads
+\emph{coarse} geometry --- modulation ($0.49$) and SNR ($0.44$) are well above chance --- but
+sits essentially at chance on the subtle impairments (I/Q imbalance $0.26$ for four classes).
+Its confusion matrices (Figures~\ref{fig:vlm_mod}, \ref{fig:vlm_imp}) show heavy spread, and
+inspection of the raw generations confirms these are genuine, often-wrong predictions, not an
+evaluation artefact. This is the expected outcome: a $256$M general-purpose multimodal model,
+adapted with a small LoRA on a few thousand images, lacks both the convolutional inductive
+bias for dense-texture discrimination and enough task data to acquire it.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.8\columnwidth]{figures/vlm_confusion.pdf}
-\caption{SmolVLM-256M (LoRA) validation confusion matrix. The model captures coarse
-constellation structure but confuses the dense APSK and high-order classes.}
-\label{fig:vlm}
+\includegraphics[width=0.72\columnwidth]{figures/vlm_cm_modulation.pdf}
+\caption{VLM modulation confusion matrix (validation). The model captures coarse structure
+but spreads probability across visually similar schemes.}
+\label{fig:vlm_mod}
 \end{figure}
 
+\begin{figure}[htbp]
+\centering
+\subfigure[Phase noise]{\includegraphics[width=0.44\columnwidth]{figures/vlm_cm_phase_noise.pdf}}
+\subfigure[I/Q imbalance]{\includegraphics[width=0.44\columnwidth]{figures/vlm_cm_iq_imbalance.pdf}}
+\subfigure[Interference]{\includegraphics[width=0.44\columnwidth]{figures/vlm_cm_interference.pdf}}
+\subfigure[SNR range]{\includegraphics[width=0.44\columnwidth]{figures/vlm_cm_snr_range.pdf}}
+\caption{VLM per-impairment confusion matrices (validation) --- close to chance on the
+impairment levels.}
+\label{fig:vlm_imp}
+\end{figure}
+
+\subsection{Robustness, generalization and comparison}
+Figure~\ref{fig:accsnr} plots accuracy as a function of SNR for both models: the CNN improves
+with SNR and stays usable even at $10$~dB, while the VLM remains weak throughout.
+Generalization is the sharpest difference (Table~\ref{tab:amc}): tested at the unseen $20$~dB,
+the CNN's modulation accuracy is \emph{maintained} ($0.86\!\to\!0.89$) and its impairment
+accuracies barely move, whereas the VLM \emph{collapses} ($0.49\!\to\!0.26$ for modulation) ---
+it had over-fit the two training SNRs. Table~\ref{tab:compare} summarises the comparison along
+the five axes required by the brief.
+
+\begin{figure}[htbp]
+\centering
+\subfigure[ResNet-18]{\includegraphics[width=0.48\columnwidth]{figures/cnn_accuracy_vs_snr.pdf}}
+\subfigure[SmolVLM]{\includegraphics[width=0.48\columnwidth]{figures/vlm_accuracy_vs_snr.pdf}}
+\caption{Per-task accuracy as a function of SNR. The CNN (left) rises with SNR and is robust at
+low SNR; the VLM (right) is weak across the range.}
+\label{fig:accsnr}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{CNN vs.\ VLM along the five comparison axes of the brief.}
+\label{tab:compare}
+\begin{tabular}{lll}
+\hline
+Axis & ResNet-18 (CNN) & SmolVLM-256M (VLM)\\
+\hline
+Mean accuracy            & $0.82$ & $0.36$\\
+Robustness to low SNR    & holds at $10$~dB & weak across SNR\\
+Sensitivity to severity  & resolves levels & near chance on levels\\
+Generalization ($20$~dB) & maintained & collapses\\
+Compute                  & $11$M, $\sim$4~min, laptop GPU & $264$M, $\sim$45~min, A100\\
+\hline
+\end{tabular}
+\end{table}
+
 \subsection{Discussion}
-On this dataset the convolutional baseline clearly outperforms the fine-tuned VLM ($80\%$
-vs.\ $55\%$), which is unsurprising: distinguishing modulations from constellation images is
-a fine-grained texture/geometry problem, exactly what convolutional inductive biases are good
-at, and the VLM's language head adds little. The most valuable scientific outcome, however,
-came from the errors rather than the accuracy: the CNN's inability to separate HQAM from QAM
-was a direct, visible symptom of a flaw in our signal generator, which we then corrected at
-the source.
+For this fine-grained constellation task the lightweight convolutional baseline decisively
+beats the fine-tuned vision-language model on \emph{every} axis --- accuracy, robustness,
+generalization and cost. The VLM's role is interpretive rather than competitive: it shows that
+a general image-text model can recover coarse constellation structure (which scheme family,
+roughly how noisy) but not the fine geometric cues that encode impairment severity, and that
+without a convolutional inductive bias it over-fits the specific SNRs it was shown. The most
+valuable scientific outcome, however, came from the errors: the HQAM/QAM confusion in our
+first run was a visible symptom of a flaw in the signal generator, which we traced and
+corrected at the source --- and the corrected dataset's confusion matrix
+(Figure~\ref{fig:cnn_mod}) confirms the fix.
 
 \section{The application}
 The visualiser is a native Qt~6 application with a C++/QML architecture. The DSP engine runs
@@ -449,10 +539,12 @@ behind every figure here.
 We built a complete, self-contained AMC pipeline: a Qt/C++ visualiser that synthesises
 sixteen modulations, corrupts them with a mathematically-grounded chain of impairments
 (calibrated AWGN, Wiener/Ornstein--Uhlenbeck phase noise, I/Q imbalance and a coherent CW
-jammer), and exports a labelled $3072$-image dataset, on which a ResNet-18 and a LoRA-tuned
-SmolVLM reach $80\%$ and $55\%$ accuracy. The additive-noise channel was validated against
-theory, the phase-noise error floor was reproduced, and a constellation-modelling error
-revealed by the classifier was traced and corrected. Natural extensions include retraining on
+jammer), and exports a labelled $3072$-image dataset on which a multi-task ResNet-18
+(mean per-task accuracy $0.82$) and a LoRA-tuned SmolVLM ($0.36$) predict all five labels,
+evaluated per task with confusion matrices, accuracy-vs-SNR and a held-out-SNR generalization
+test. The additive-noise channel was validated against theory, the phase-noise error floor was
+reproduced, and a constellation-modelling error revealed by the classifier was traced and
+corrected. Natural extensions include retraining on
 the corrected hexagonal constellations, adding multipath fading and carrier-frequency offset
 to the channel, and raising the image resolution to relieve the high-order density
 saturation.

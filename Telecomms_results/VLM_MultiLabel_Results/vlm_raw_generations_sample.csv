@@ -1,0 +1,26 @@
+true,generated
+Modulation: 16-HQAM; PhaseNoise: None; IQ: High; Interference: None; SNR: Low,Modulation: 128-APSK; PhaseNoise: High; IQ: Low; Interference: Medium; SNR: High
+Modulation: 64-APSK; PhaseNoise: Low; IQ: Low; Interference: None; SNR: Low,Modulation: 128-APSK; PhaseNoise: None; IQ: Low; Interference: Low; SNR: Low
+Modulation: BPSK; PhaseNoise: Medium; IQ: Low; Interference: High; SNR: High,Modulation: BPSK; PhaseNoise: Medium; IQ: None; Interference: None; SNR: High
+Modulation: 128-QAM; PhaseNoise: Low; IQ: High; Interference: None; SNR: Low,Modulation: 128-QAM; PhaseNoise: High; IQ: High; Interference: Low; SNR: Low
+Modulation: 32-QAM; PhaseNoise: None; IQ: Medium; Interference: Low; SNR: High,Modulation: 16-APSK; PhaseNoise: None; IQ: Low; Interference: Medium; SNR: High
+Modulation: 32-APSK; PhaseNoise: Low; IQ: None; Interference: None; SNR: Medium,Modulation: 16-APSK; PhaseNoise: None; IQ: None; Interference: Low; SNR: Medium
+Modulation: 64-APSK; PhaseNoise: High; IQ: High; Interference: Low; SNR: Medium,Modulation: 128-APSK; PhaseNoise: None; IQ: None; Interference: Low; SNR: Low
+Modulation: 128-QAM; PhaseNoise: Medium; IQ: High; Interference: None; SNR: Medium,Modulation: 128-QAM; PhaseNoise: High; IQ: High; Interference: Low; SNR: High
+Modulation: 64-APSK; PhaseNoise: Low; IQ: High; Interference: High; SNR: Low,Modulation: 16-APSK; PhaseNoise: None; IQ: Low; Interference: High; SNR: Low
+Modulation: 32-APSK; PhaseNoise: Low; IQ: None; Interference: Low; SNR: High,Modulation: 16-APSK; PhaseNoise: None; IQ: Medium; Interference: Medium; SNR: Medium
+Modulation: 16-QAM; PhaseNoise: Low; IQ: Medium; Interference: High; SNR: Medium,Modulation: 16-QAM; PhaseNoise: High; IQ: Medium; Interference: Low; SNR: Medium
+Modulation: 32-QAM; PhaseNoise: Medium; IQ: Medium; Interference: High; SNR: High,Modulation: 128-QAM; PhaseNoise: High; IQ: None; Interference: None; SNR: Low
+Modulation: 16-APSK; PhaseNoise: Medium; IQ: Medium; Interference: High; SNR: High,Modulation: 64-HQAM; PhaseNoise: Medium; IQ: Low; Interference: High; SNR: Medium
+Modulation: 128-QAM; PhaseNoise: High; IQ: None; Interference: Medium; SNR: High,Modulation: 32-QAM; PhaseNoise: High; IQ: High; Interference: Low; SNR: Low
+Modulation: 8-ASK; PhaseNoise: Low; IQ: High; Interference: Low; SNR: Medium,Modulation: 8-ASK; PhaseNoise: None; IQ: None; Interference: None; SNR: Low
+Modulation: 64-HQAM; PhaseNoise: None; IQ: Medium; Interference: Medium; SNR: Medium,Modulation: 128-APSK; PhaseNoise: None; IQ: None; Interference: Low; SNR: Low
+Modulation: 16-APSK; PhaseNoise: Low; IQ: High; Interference: Medium; SNR: Low,Modulation: 128-APSK; PhaseNoise: None; IQ: Low; Interference: Low; SNR: Low
+Modulation: 64-QAM; PhaseNoise: Medium; IQ: None; Interference: Medium; SNR: Medium,Modulation: 64-QAM; PhaseNoise: High; IQ: None; Interference: None; SNR: Low
+Modulation: 256-QAM; PhaseNoise: Medium; IQ: Low; Interference: Medium; SNR: High,Modulation: 256-QAM; PhaseNoise: Medium; IQ: None; Interference: High; SNR: Low
+Modulation: 256-QAM; PhaseNoise: High; IQ: Low; Interference: None; SNR: High,Modulation: 256-QAM; PhaseNoise: Medium; IQ: None; Interference: None; SNR: Low
+Modulation: 16-APSK; PhaseNoise: Low; IQ: Low; Interference: High; SNR: Low,Modulation: 64-HQAM; PhaseNoise: Medium; IQ: Low; Interference: High; SNR: Low
+Modulation: 64-QAM; PhaseNoise: Medium; IQ: Low; Interference: High; SNR: Low,Modulation: 64-QAM; PhaseNoise: Medium; IQ: High; Interference: Low; SNR: High
+Modulation: 32-APSK; PhaseNoise: None; IQ: Low; Interference: Medium; SNR: Low,Modulation: 64-APSK; PhaseNoise: None; IQ: Low; Interference: Low; SNR: Low
+Modulation: 16-HQAM; PhaseNoise: None; IQ: Medium; Interference: Medium; SNR: Medium,Modulation: 16-APSK; PhaseNoise: None; IQ: None; Interference: Low; SNR: Low
+Modulation: 16-APSK; PhaseNoise: None; IQ: Low; Interference: None; SNR: Medium,Modulation: 16-HQAM; PhaseNoise: None; IQ: Low; Interference: Medium; SNR: High

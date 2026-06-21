@@ -1,12 +1,9 @@
 # ==========================================
 # 1. CMAKE & COMPILER BUILD FOLDERS
 # ==========================================
-# Ignore all folders that start with "build" 
 build/
 build-*/
 *.build/
-
-# Ignore CMake cache and generated Makefiles
 CMakeCache.txt
 CMakeFiles/
 Makefile
@@ -16,10 +13,9 @@ compile_commands.json
 # ==========================================
 # 2. QT CREATOR USER SETTINGS
 # ==========================================
-# These files store your specific Mac's window sizes and compiler paths.
-# Your team should NOT download these.
 *.user
 *.user.*
+
 # ==========================================
 # 3. COMPILED OBJECTS & EXECUTABLES
 # ==========================================
@@ -30,6 +26,7 @@ moc_*.cpp
 qrc_*.cpp
 ui_*.h
 *.app
+appCommunications_Visualiser
 appFormulaDash
 FormulaDash
 
@@ -40,7 +37,9 @@ FormulaDash
 .AppleDouble
 .LSOverride
 
-#other things
+# ==========================================
+# 5. DESIGN NOTES (kept out of the repo by choice)
+# ==========================================
 README_CPP_DISSECTION.md
 README_QML_DISSECTION.md
 README_QML_EXPLAINED.md
@@ -51,14 +50,44 @@ Next_Steps.md
 Old_md
 Project_Overview.md
 
-# Ignore heavy model weights and checkpoints
+# ==========================================
+# 6. PYTHON ENVIRONMENTS / CACHES
+# ==========================================
+__pycache__/
+*.pyc
+.venv/
+*venv/
+ai_env/
+
+# ==========================================
+# 7. HEAVY MODEL WEIGHTS & CHECKPOINTS
+# ==========================================
 smolvlm_rf_model/
+smolvlm_multilabel/
+smolvlm_generalize/
 checkpoint-*/
 *.safetensors
 *.bin
+*.pt
+*.pth
 
-# Ignore raw image datasets (unless you are using Git LFS)
+# ==========================================
+# 8. DATASETS & LARGE BUNDLES (rebuild from the app)
+# ==========================================
 dataset_images/
-*.pngTelecomms_Results/smolvlm_rf_model/
-*.safetensors
-dataset_images.zip
+dataset_images*.zip
+RF_Dataset/
+CommsVis_dist*/
+CommsVis_dist*.zip
+*.dll
+
+# ==========================================
+# 9. LATEX INTERMEDIATES (.tex / .pdf / figures/ are kept)
+# ==========================================
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.synctex.gz
+_compile_test.*

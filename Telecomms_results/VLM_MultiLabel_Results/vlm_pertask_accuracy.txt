@@ -1,0 +1,5 @@
+modulation: 0.4927
+phase_noise: 0.3138
+iq_imbalance: 0.2553
+interference: 0.3154
+snr_range: 0.4439
